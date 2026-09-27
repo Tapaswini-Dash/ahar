@@ -1,0 +1,60 @@
+﻿from datetime import datetime
+
+from pydantic import BaseModel, ConfigDict, Field
+
+
+class PackagedFoodLookupResult(BaseModel):
+    """What a barcode lookup returns — not yet logged, just found."""
+    product_name: str
+    brand: str | None = None
+    barcode: str
+    serving_size_grams: float
+    calories_per_serving: float
+    protein_g_per_serving: float
+    carbs_g_per_serving: float
+    fat_g_per_serving: float
+    ingredients_text: str | None = None
+    image_url: str | None = None
+
+
+class PackagedFoodLogCreate(BaseModel):
+    product_name: str = Field(min_length=1, max_length=255)
+    brand: str | None = None
+    barcode: str | None = None
+    serving_size_grams: float = Field(gt=0)
+    servings_consumed: float = Field(gt=0, default=1.0)
+    calories_per_serving: float = Field(ge=0)
+    protein_g_per_serving: float = Field(ge=0)
+    carbs_g_per_serving: float = Field(ge=0)
+    fat_g_per_serving: float = Field(ge=0)
+    logged_at: datetime | None = None
+
+
+class PackagedFoodLogOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    product_name: str
+    brand: str | None
+    barcode: str | None
+    serving_size_grams: float
+    servings_consumed: float
+    calories_per_serving: float
+    protein_g_per_serving: float
+    carbs_g_per_serving: float
+    fat_g_per_serving: float
+    total_calories: float
+    logged_at: datetime
+
+
+class BrandSuggestion(BaseModel):
+    product_name: str
+    brand: str | None
+    barcode: str | None = None
+    serving_size_grams: float = 100.0
+    calories_per_serving: float
+    protein_g_per_serving: float
+    carbs_g_per_serving: float = 0.0
+    fat_g_per_serving: float = 0.0
+    ingredients_text: str | None = None
+    reason: str

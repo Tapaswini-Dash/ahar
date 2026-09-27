@@ -1,0 +1,33 @@
+{
+  "target_columns": [
+    "calories",
+    "mass",
+    "fat",
+    "carb",
+    "protein"
+  ],
+  "target_mean": {
+    "calories": 237.0701,
+    "mass": 205.0884,
+    "fat": 11.7142,
+    "carb": 18.5510,
+    "protein": 16.4735
+  },
+  "target_std": {
+    "calories": 187.6383,
+    "mass": 142.5435,
+    "fat": 12.0098,
+    "carb": 15.3465,
+    "protein": 17.6698
+  },
+  "image_size": 224,
+  "resize_size": 256,
+  "image_normalization": {
+    "mean": [0.485, 0.456, 0.406],
+    "std": [0.229, 0.224, 0.225]
+  },
+  "architecture": "efficientnet_b0",
+  "output_count": 5,
+  "output_order_note": "Outputs are ordered as calories, mass, fat, carb, protein.",
+  "usage_note": "M3 estimates nutrition from image appearance. Use estimated mass as an editable serving-weight suggestion. Use verified INDB or another verified source after dish and portion confirmation for final logged nutrition."
+}

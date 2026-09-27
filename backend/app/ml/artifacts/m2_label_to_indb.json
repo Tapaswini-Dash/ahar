@@ -1,0 +1,26 @@
+{
+  "chai": {
+    "recipe_code": "ASC001",
+    "recipe_name": "Hot tea (Garam Chai)"
+  },
+  "chapati": {
+    "recipe_code": "ASC096",
+    "recipe_name": "Chapati/Roti"
+  },
+  "dal_makhani": {
+    "recipe_code": "OSR139",
+    "recipe_name": "Dal makhani"
+  },
+  "dhokla": {
+    "recipe_code": "ASC474",
+    "recipe_name": "Dhokla"
+  },
+  "idli": {
+    "recipe_code": "ASC144",
+    "recipe_name": "Idli"
+  },
+  "masala_dosa": {
+    "recipe_code": "ASC146",
+    "recipe_name": "Masala dosa"
+  }
+}
