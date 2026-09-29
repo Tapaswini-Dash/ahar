@@ -17,6 +17,7 @@ from app.models.daily_progress import DailyProgress
 from app.models.user_gamification import UserGamification
 from app.models.badge import Badge, UserBadge
 from app.models.reminder import Reminder
+from app.models.day_status import DayStatus  # noqa: F401
 
 __all__ = [
     "Base",

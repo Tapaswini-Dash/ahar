@@ -1,3 +1,10 @@
+﻿"""
+Badge: catalog of all badges that exist (seeded once from
+data/seed/badges.json via scripts/seed_indb.py or a dedicated seed script —
+this table is read-only at runtime). UserBadge is the join table recording
+which user earned which badge and when.
+"""
+
 from datetime import datetime
 
 from sqlalchemy import DateTime, ForeignKey, String, UniqueConstraint
@@ -10,24 +17,24 @@ class Badge(Base):
     __tablename__ = "badges"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    code: Mapped[str] = mapped_column(String(50), unique=True, index=True)
-    name: Mapped[str] = mapped_column(String(100))
-    description: Mapped[str] = mapped_column(String(255))
-    icon: Mapped[str] = mapped_column(String(10), default="🏅")
-    # "streak" | "total_meals" | "level" — what check_and_award reads to decide
-    criteria_type: Mapped[str] = mapped_column(String(30))
-    criteria_value: Mapped[int] = mapped_column(default=0)
+    code: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)  # e.g. "streak_7"
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str] = mapped_column(String(500), nullable=False)
+    icon: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
-    earned_by: Mapped[list['UserBadge']] = relationship(back_populates='badge', cascade='all, delete-orphan')
+    earned_by: Mapped[list["UserBadge"]] = relationship(back_populates="badge")
+
 
 class UserBadge(Base):
-    __tablename__ = 'user_badges'
-    __table_args__ = (UniqueConstraint('user_gamification_id', 'badge_id', name='uq_user_badge'),)
+    __tablename__ = "user_badges"
+    __table_args__ = (UniqueConstraint("user_gamification_id", "badge_id", name="uq_user_badge"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    user_gamification_id: Mapped[int] = mapped_column(ForeignKey('user_gamification.id', ondelete='CASCADE'), index=True)
-    badge_id: Mapped[int] = mapped_column(ForeignKey('badges.id', ondelete='CASCADE'), index=True)
-    earned_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    user_gamification_id: Mapped[int] = mapped_column(
+        ForeignKey("user_gamification.id", ondelete="CASCADE")
+    )
+    badge_id: Mapped[int] = mapped_column(ForeignKey("badges.id", ondelete="CASCADE"))
+    earned_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
-    user_gamification: Mapped['UserGamification'] = relationship(back_populates='earned_badges')
-    badge: Mapped[Badge] = relationship(back_populates='earned_by')
+    user_gamification: Mapped["UserGamification"] = relationship(back_populates="earned_badges")
+    badge: Mapped["Badge"] = relationship(back_populates="earned_by")

@@ -97,6 +97,27 @@ export default function NutritionPanel({ nutrition }) {
                 </span>
               </div>
 
+              {advisories?.length > 0 && (
+                <div className="mt-3 space-y-2">
+                  {advisories.map((a, i) => (
+                     <div key={i} className={`rounded-xl p-3 text-sm ${a.type === "allergy_warning" ? "border border-red-200 bg-red-50 text-red-800" : "border border-amber-200 bg-amber-50 text-amber-900"}`}>
+                       {a.message}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+               {goalSwaps?.length > 0 && (
+                 <div className="mt-3 rounded-xl border border-blue-200 bg-blue-50 p-4">
+                   <p className="text-xs font-semibold uppercase text-blue-700 mb-2">Toward your goal</p>
+                     {goalSwaps.map((s, i) => (
+                   <p key={i} className="text-sm text-blue-900 mb-1">
+                     <strong>{s.item}:</strong> {s.suggestion} — <span className="text-blue-700">{s.reason}</span>
+                    </p>
+                  ))}
+                 </div>
+               )}
+
               {item.nutrition ? (
                 <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
                   <Macro label="Energy" value={item.nutrition.energy_kcal} unit=" kcal" />

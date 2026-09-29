@@ -13,6 +13,7 @@ from app.schemas.meal_log import (
     ConfirmMealRequest,
     ManualMealLogRequest,
     MealLogOut,
+    MealLogUpdateRequest,
 )
 from app.services import meal_log_service
 
@@ -69,3 +70,20 @@ async def delete_meal(
     deleted = await meal_log_service.delete_meal_log(db, current_user.id, meal_log_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Meal log not found")
+
+
+@router.patch("/{meal_log_id}", response_model=MealLogOut)
+async def move_meal_date(
+    meal_log_id: int,
+    body: MealLogUpdateRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_active_user),
+):
+    if body.logged_at is None:
+        raise HTTPException(status_code=422, detail="A new logged_at date is required.")
+    meal = await meal_log_service.move_meal_log_date(
+        db, current_user.id, meal_log_id, body.logged_at
+    )
+    if meal is None:
+        raise HTTPException(status_code=404, detail="Meal log not found")
+    return meal

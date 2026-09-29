@@ -1,5 +1,4 @@
-﻿
-from datetime import date, timedelta
+﻿from datetime import date, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -58,6 +57,7 @@ async def register_meal_logged(
     """Call this once, right after a meal is successfully saved."""
     today = logged_on or date.today()
     record = await get_or_create(db, user_id)
+    old_level = record.level
 
     if record.last_logged_date == today:
         # Already logged today — still award XP for the meal, no streak change.
@@ -77,6 +77,8 @@ async def register_meal_logged(
 
     await db.commit()
     await db.refresh(record)
+
+    record._leveled_up = record.level > old_level  # transient, not a DB column
     return record
 
 
@@ -92,6 +94,7 @@ def to_progress_dict(record: UserGamification, today: date | None = None) -> dic
         "current_streak": record.current_streak if record.last_logged_date and record.last_logged_date >= today - timedelta(days=1) else 0,
         "longest_streak": record.longest_streak,
         "goal_complete_date": record.goal_complete_date,
+        "leveled_up": getattr(record, "_leveled_up", False),
     }
 
 
@@ -111,9 +114,11 @@ async def claim_daily_goal_reward(db: AsyncSession, user_id: int, log_date: date
     record = await get_or_create(db, user_id)
     if record.goal_complete_date == log_date:
         return {"completed": True, "awarded": False, "xp_awarded": 0, "calories": round(calories), "target": target, **to_progress_dict(record)}
+    old_level = record.level
     record.goal_complete_date = log_date
     record.xp += 25
     record.level = _level_from_xp(record.xp)
     await db.commit()
     await db.refresh(record)
+    record._leveled_up = record.level > old_level
     return {"completed": True, "awarded": True, "xp_awarded": 25, "calories": round(calories), "target": target, **to_progress_dict(record)}

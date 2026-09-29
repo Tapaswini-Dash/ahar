@@ -15,6 +15,7 @@ class PackagedFoodLookupResult(BaseModel):
     fat_g_per_serving: float
     ingredients_text: str | None = None
     image_url: str | None = None
+    nutrition_source: str = "open_food_facts"
 
 
 class PackagedFoodLogCreate(BaseModel):
@@ -27,7 +28,10 @@ class PackagedFoodLogCreate(BaseModel):
     protein_g_per_serving: float = Field(ge=0)
     carbs_g_per_serving: float = Field(ge=0)
     fat_g_per_serving: float = Field(ge=0)
+    ingredients_text: str | None = None
+    nutrition_source: str = "open_food_facts"
     logged_at: datetime | None = None
+    allow_duplicate: bool = False
 
 
 class PackagedFoodLogOut(BaseModel):
@@ -45,6 +49,22 @@ class PackagedFoodLogOut(BaseModel):
     fat_g_per_serving: float
     total_calories: float
     logged_at: datetime
+    ingredients_text: str | None = None
+    nutrition_source: str
+
+
+class PackagedLabelRead(BaseModel):
+    product_name: str | None = None
+    brand: str | None = None
+    barcode: str | None = None
+    serving_size_grams: float | None = None
+    nutrition_basis: str = "per_100g"
+    calories: float | None = None
+    protein_g: float | None = None
+    carbs_g: float | None = None
+    fat_g: float | None = None
+    ingredients_text: str | None = None
+    needs_review: bool = True
 
 
 class BrandSuggestion(BaseModel):

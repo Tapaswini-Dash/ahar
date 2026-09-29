@@ -69,3 +69,13 @@ async def init_db() -> None:
             if "goal_complete_date" not in columns:
                 sync_conn.execute(text("ALTER TABLE user_gamification ADD COLUMN goal_complete_date DATE"))
         await conn.run_sync(add_gamification_goal_column)
+        def add_packaged_food_columns(sync_conn):
+            inspector = inspect(sync_conn)
+            if "packaged_food_logs" not in inspector.get_table_names():
+                return
+            columns = {column["name"] for column in inspector.get_columns("packaged_food_logs")}
+            if "ingredients_text" not in columns:
+                sync_conn.execute(text("ALTER TABLE packaged_food_logs ADD COLUMN ingredients_text TEXT"))
+            if "nutrition_source" not in columns:
+                sync_conn.execute(text("ALTER TABLE packaged_food_logs ADD COLUMN nutrition_source VARCHAR(32) NOT NULL DEFAULT 'open_food_facts'"))
+        await conn.run_sync(add_packaged_food_columns)

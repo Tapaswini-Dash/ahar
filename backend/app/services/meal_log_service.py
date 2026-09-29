@@ -167,6 +167,27 @@ async def delete_meal_log(db: AsyncSession, user_id: int, meal_log_id: int) -> b
     return True
 
 
+async def move_meal_log_date(
+    db: AsyncSession, user_id: int, meal_log_id: int, logged_at: datetime
+) -> MealLog | None:
+    result = await db.execute(
+        select(MealLog).where(MealLog.id == meal_log_id, MealLog.user_id == user_id)
+    )
+    meal = result.scalar_one_or_none()
+    if meal is None:
+        return None
+    previous_date = meal.logged_at.date()
+    meal.logged_at = logged_at
+    await db.commit()
+    await db.refresh(meal)
+    for day in {previous_date, logged_at.date()}:
+        try:
+            await progress_service.recompute_daily_progress(db, user_id, day)
+        except Exception:
+            logger.exception("recompute_daily_progress failed after meal date change")
+    return meal
+
+
 async def _apply_side_effects(db: AsyncSession, user_id: int, logged_at: datetime) -> None:
     """Progress recompute and gamification are important but must never
     turn an already-saved meal into a 500 for the user. Log and swallow —

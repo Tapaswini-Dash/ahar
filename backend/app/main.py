@@ -7,8 +7,10 @@ from app.api.router import api_router
 from app.core.config import settings
 from app.core.database import init_db
 from app.ml.model_loader import load_models
-
-
+from app.api import day_status as day_status_router
+from app.schemas import day_status as day_status_schema
+from app.services import day_status_service
+from app.models import day_status as day_status_model
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
@@ -32,7 +34,7 @@ app.add_middleware(
 )
 
 app.include_router(api_router, prefix=settings.api_v1_prefix)
-
+app.include_router(day_status_router.router, prefix="/api")
 
 @app.get("/")
 async def root() -> dict:

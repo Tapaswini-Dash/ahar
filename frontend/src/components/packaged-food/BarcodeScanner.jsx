@@ -1,33 +1,34 @@
-﻿
-// frontend/src/components/packaged-food/BarcodeScanner.jsx
-import { useEffect, useRef } from "react";
-import { Html5Qrcode } from "html5-qrcode";
+﻿import { useEffect, useRef, useState } from "react";
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
 
 export default function BarcodeScanner({ onDetected, onClose }) {
   const scannerRef = useRef(null);
+  const onDetectedRef = useRef(onDetected);
+  const [error, setError] = useState("");
+  useEffect(() => { onDetectedRef.current = onDetected; }, [onDetected]);
 
   useEffect(() => {
-    const scanner = new Html5Qrcode("barcode-reader");
+    let cancelled = false;
+    const scanner = new Html5Qrcode("barcode-reader", {
+      formatsToSupport: [Html5QrcodeSupportedFormats.EAN_13, Html5QrcodeSupportedFormats.EAN_8, Html5QrcodeSupportedFormats.UPC_A, Html5QrcodeSupportedFormats.UPC_E],
+    });
     scannerRef.current = scanner;
-    scanner
-      .start(
-        { facingMode: "environment" },
-        { fps: 10, qrbox: { width: 250, height: 150 } },
-        (decodedText) => {
-          onDetected(decodedText);
-          scanner.stop();
-        }
-      )
-      .catch(() => {});
-    return () => { scanner.stop().catch(() => {}); };
-  }, [onDetected]);
+    scanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 280, height: 140 } }, async (value) => {
+      if (cancelled) return;
+      cancelled = true;
+      onDetectedRef.current(value);
+      try { await scanner.stop(); } catch { /* camera may already be closing */ }
+    }).catch(() => {
+      if (!cancelled) setError("Camera could not start. Allow camera access or type the barcode number above.");
+    });
+    return () => {
+      cancelled = true;
+      if (scanner.isScanning) scanner.stop().catch(() => {});
+    };
+  }, []);
 
-  return (
-    <div className="rounded-2xl bg-black p-4">
-      <div id="barcode-reader" style={{ width: "100%" }} />
-      <button type="button" className="mt-3 w-full rounded-xl bg-slate-700 py-2 text-white" onClick={onClose}>
-        Cancel
-      </button>
-    </div>
-  );
+  return <div className="barcode-scanner">{error ? <p role="alert">{error}</p> : <div id="barcode-reader" />}<button type="button" className="dashboard-text-button" onClick={onClose}>Close scanner</button></div>;
 }
+
+
+

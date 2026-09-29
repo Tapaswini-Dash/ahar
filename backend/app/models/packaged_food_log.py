@@ -22,6 +22,8 @@ class PackagedFoodLog(Base, TimestampMixin):
     brand: Mapped[str | None] = mapped_column(String(255), nullable=True)
     barcode: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     label_image_path: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    ingredients_text: Mapped[str | None] = mapped_column(String, nullable=True)
+    nutrition_source: Mapped[str] = mapped_column(String(32), default="open_food_facts", nullable=False)
 
     serving_size_grams: Mapped[float] = mapped_column(Float, nullable=False)
     servings_consumed: Mapped[float] = mapped_column(Float, default=1.0, nullable=False)

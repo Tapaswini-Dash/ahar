@@ -12,7 +12,7 @@ import logging
 import httpx
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from datetime import datetime, timezone
+from datetime import datetime, time, timedelta, timezone
 
 from app.models.packaged_food_log import PackagedFoodLog
 from app.models.meal_log import MealLog, MealType
@@ -26,7 +26,7 @@ from app.schemas.packaged_food import (
 logger = logging.getLogger(__name__)
 
 OFF_PRODUCT_URL = "https://world.openfoodfacts.org/api/v2/product/{barcode}.json"
-OFF_SEARCH_URL = "https://search.openfoodfacts.org/search"
+OFF_SEARCH_URL = "https://world.openfoodfacts.org/cgi/search.pl"
 
 
 async def lookup_barcode(barcode: str) -> PackagedFoodLookupResult | None:
@@ -70,6 +70,7 @@ async def lookup_barcode(barcode: str) -> PackagedFoodLookupResult | None:
         fat_g_per_serving=round(fat * scale, 1),
         ingredients_text=product.get("ingredients_text"),
         image_url=product.get("image_url"),
+        nutrition_source="open_food_facts",
     )
 
 
@@ -86,18 +87,49 @@ async def log_packaged_food(
     user_id: int,
     body: PackagedFoodLogCreate,
 ) -> PackagedFoodLog:
+    logged_at = body.logged_at or datetime.now(timezone.utc)
+    local_midnight = datetime.combine(logged_at.date(), time.min, tzinfo=logged_at.tzinfo or timezone.utc)
+    day_start = local_midnight.astimezone(timezone.utc)
+    day_end = (local_midnight + timedelta(days=1)).astimezone(timezone.utc)
+    duplicate_query = select(PackagedFoodLog).where(
+        PackagedFoodLog.user_id == user_id,
+        PackagedFoodLog.logged_at >= day_start,
+        PackagedFoodLog.logged_at < day_end,
+    )
+    if body.barcode:
+        duplicate_query = duplicate_query.where(PackagedFoodLog.barcode == body.barcode)
+    else:
+        brand_filter = (
+            PackagedFoodLog.brand.ilike(body.brand.strip())
+            if body.brand and body.brand.strip()
+            else PackagedFoodLog.brand.is_(None)
+        )
+        duplicate_query = duplicate_query.where(
+            PackagedFoodLog.barcode.is_(None),
+            PackagedFoodLog.product_name.ilike(body.product_name.strip()),
+            brand_filter,
+        )
+    duplicate_result = await db.execute(
+        duplicate_query.order_by(PackagedFoodLog.logged_at.desc()).limit(1)
+    )
+    duplicate = duplicate_result.scalar_one_or_none()
+    if duplicate and not body.allow_duplicate:
+        raise DuplicatePackagedFood(duplicate)
+
     log = PackagedFoodLog(
         user_id=user_id,
         product_name=body.product_name,
         brand=body.brand,
         barcode=body.barcode,
+        ingredients_text=body.ingredients_text,
+        nutrition_source=body.nutrition_source,
         serving_size_grams=body.serving_size_grams,
         servings_consumed=body.servings_consumed,
         calories_per_serving=body.calories_per_serving,
         protein_g_per_serving=body.protein_g_per_serving,
         carbs_g_per_serving=body.carbs_g_per_serving,
         fat_g_per_serving=body.fat_g_per_serving,
-        logged_at=body.logged_at or datetime.now(timezone.utc),
+        logged_at=logged_at,
     )
     db.add(log)
     await db.commit()
@@ -123,6 +155,11 @@ async def log_packaged_food(
     return log
 
 
+class DuplicatePackagedFood(Exception):
+    def __init__(self, existing: PackagedFoodLog):
+        self.existing = existing
+
+
 async def suggest_brands(
     query: str,
     diet_preference: str | None = None,
@@ -131,16 +168,17 @@ async def suggest_brands(
 ) -> list[BrandSuggestion]:
     """Searches OFF for the product category, filters/ranks by protein
     (for muscle-gain goals) or lower calories (for weight-loss goals)."""
-    payload = {
-        "q": query,
-        "page": 1,
+    params = {
+        "search_terms": query,
+        "search_simple": 1,
+        "action": "process",
+        "json": 1,
         "page_size": 50,
-        "langs": ["en"],
-        "fields": ["product_name", "brands", "nutriments", "labels_tags", "ingredients_text", "serving_size", "code"],
+        "fields": "product_name,brands,nutriments,labels_tags,ingredients_text,serving_size,code",
     }
     async with httpx.AsyncClient(timeout=12.0, headers={"User-Agent": "AharNutrition/1.0 (food diary)"}) as client:
         try:
-            response = await client.post(OFF_SEARCH_URL, json=payload)
+            response = await client.get(OFF_SEARCH_URL, params=params)
             response.raise_for_status()
             data = response.json()
         except Exception:
@@ -148,7 +186,7 @@ async def suggest_brands(
             raise RuntimeError("Open Food Facts product search is temporarily unavailable.")
 
     candidates = []
-    for product in data.get("hits", []):
+    for product in data.get("products", []):
         nutriments = product.get("nutriments", {})
         calories = nutriments.get("energy-kcal_100g")
         protein = nutriments.get("proteins_100g")

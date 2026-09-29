@@ -4,12 +4,28 @@ import { fetchCurrentUser, login as loginApi, loginWithGoogle as loginWithGoogle
 
 const AuthContext = createContext(null);
 const STORAGE_KEY = "ahar_access_token";
+const REFRESH_KEY = "ahar_refresh_token";
 
 export function AuthProvider({ children }) {
   const [token, setToken] = useState(() => localStorage.getItem(STORAGE_KEY));
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(Boolean(token));
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    const syncToken = () => setToken(localStorage.getItem(STORAGE_KEY));
+    const expireSession = () => {
+      setToken(null);
+      setUser(null);
+      setError("Your session expired. Please sign in again.");
+    };
+    window.addEventListener("ahar:auth-token", syncToken);
+    window.addEventListener("ahar:auth-expired", expireSession);
+    return () => {
+      window.removeEventListener("ahar:auth-token", syncToken);
+      window.removeEventListener("ahar:auth-expired", expireSession);
+    };
+  }, []);
 
   // On first load, if a token was saved from a previous session, verify it
   // and load the user — otherwise treat it as logged out.
@@ -22,6 +38,7 @@ export function AuthProvider({ children }) {
       .then(setUser)
       .catch(() => {
         localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem(REFRESH_KEY);
         setToken(null);
         setUser(null);
       })
@@ -30,6 +47,7 @@ export function AuthProvider({ children }) {
 
   const handleAuthSuccess = useCallback(async (tokens) => {
     localStorage.setItem(STORAGE_KEY, tokens.access_token);
+    localStorage.setItem(REFRESH_KEY, tokens.refresh_token);
     setToken(tokens.access_token);
     const me = await fetchCurrentUser(tokens.access_token);
     setUser(me);
@@ -76,6 +94,7 @@ export function AuthProvider({ children }) {
 
   const logout = useCallback(() => {
     localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(REFRESH_KEY);
     setToken(null);
     setUser(null);
   }, []);

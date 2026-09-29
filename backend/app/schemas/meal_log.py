@@ -53,6 +53,7 @@ class MealLogUpdateRequest(BaseModel):
     protein_g: float | None = None
     carbs_g: float | None = None
     fat_g: float | None = None
+    logged_at: datetime | None = None
 
 # ---------------------------------------------------------------------------
 # Append everything below to backend/app/schemas/meal_log.py (it already has

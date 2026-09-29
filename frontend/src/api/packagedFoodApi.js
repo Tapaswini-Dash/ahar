@@ -12,3 +12,9 @@ export function logPackagedFood(body, token) {
 export function suggestBrands(query, token) {
   return apiFetch(`/packaged-food/suggestions?query=${encodeURIComponent(query)}`, { token });
 }
+
+export function readPackagedLabel(file, token) {
+  const body = new FormData();
+  body.append("image", file);
+  return apiFetch("/packaged-food/read-label", { method: "POST", token, body });
+}
